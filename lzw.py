@@ -36,7 +36,6 @@ class Lzw:
                 file.write(byte.to_bytes(2, "big"))
 
     def decode(self, input_file_path):
-        data: bytes
         compressed_data = []
         with open(input_file_path, 'rb') as file:
             while True:
@@ -58,7 +57,4 @@ class Lzw:
                 extension_code += 1
             extension = alphabet[code]
 
-        result = b''
-        for byte in decompressed_data:
-            result += byte
-        return result
+        return b''.join(decompressed_data)
