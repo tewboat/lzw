@@ -33,11 +33,16 @@ class Archiver:
                         folder_path = os.sep.join((local_root, folder_name))
                     else:
                         folder_path = folder_name
-                    archive.append(self.__get_folder_block(folder_path))
+                    folder_block = self.__get_folder_block(folder_path)
+                    archive.append(folder_block)
                     for file in files:
-                        archive.append(self.__get_file_block__(os.sep.join((root, file)), os.sep.join((folder_path, file))))
+                        file_block = self.__get_file_block__(os.sep.join((root, file)),
+                                                             os.sep.join((folder_path, file)))
+                        archive.append(file_block)
             else:
-                archive.append(self.__get_file_block__(path, path.split(os.sep)[-1]))
+                file = path.split(os.sep)[-1]
+                file_block = self.__get_file_block__(path, file)
+                archive.append(file_block)
         return b''.join(archive)
 
     def __get_file_block__(self, absolute_path, local_path):

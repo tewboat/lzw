@@ -16,8 +16,10 @@ if __name__ == '__main__':
         input_paths, output_path = args.input_paths, args.output_path
         archiver = Archiver()
         lzw = Lzw()
-        archive = archiver.zip(input_paths)
-        lzw.encode(archive, args.name, output_path)
+        compressed_data = lzw.encode(archiver.zip(input_paths))
+        output_file_path = os.sep.join((output_path, args.name + '.lzw'))
+        with open(output_file_path, 'wb') as file:
+            file.write(compressed_data)
 
     elif args.command == 'UNPACK':
         input_paths, output_path = args.input_paths, args.output_path
@@ -25,8 +27,8 @@ if __name__ == '__main__':
             raise ValueError('There should be only one input path')
         archiver = Archiver()
         lzw = Lzw()
-        decoded = lzw.decode(input_paths[0])
-        archiver.unzip(decoded, output_path)
+        with open()
+        archiver.unzip(lzw.decode(input_paths[0]), output_path)
 
     else:
         print("Unknown command")

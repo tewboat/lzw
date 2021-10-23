@@ -9,7 +9,7 @@ class Lzw:
     CHAR_EXTENSION_SIZE = 16
     MAX_ALPHABET_SIZE = 2 ** CHAR_EXTENSION_SIZE
 
-    def encode(self, data: bytes, name, output_path):
+    def encode(self, data):
 
         alphabet = {i.to_bytes(1, 'big'): i for i in range(self.ALPHABET_SIZE)}
 
@@ -22,18 +22,15 @@ class Lzw:
             if temp in alphabet:
                 extension = temp
             else:
-                compressed_data.append(alphabet[extension])
+                compressed_data.append(struct.pack('>H', alphabet[extension]))
                 if len(alphabet) <= self.MAX_ALPHABET_SIZE:
                     alphabet[temp] = len(alphabet)
                 extension = byte
 
         if extension in alphabet:
-            compressed_data.append(alphabet[extension])
+            compressed_data.append(struct.pack('>H', alphabet[extension]))
 
-        output_file_path = os.sep.join((output_path, name + '.lzw'))
-        with open(output_file_path, 'wb') as file:
-            for byte in compressed_data:
-                file.write(byte.to_bytes(2, "big"))
+        return b''.join(compressed_data)
 
     def decode(self, input_file_path):
         compressed_data = []
