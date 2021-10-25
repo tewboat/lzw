@@ -27,8 +27,7 @@ if __name__ == '__main__':
             raise ValueError('There should be only one input path')
         archiver = Archiver()
         lzw = Lzw()
-        with open()
-        archiver.unzip(lzw.decode(input_paths[0]), output_path)
-
+        with open(input_paths[0], 'rb') as compressed_archive:
+            archiver.unzip(lzw.decode(compressed_archive.read()), output_path)
     else:
         print("Unknown command")

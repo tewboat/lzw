@@ -32,15 +32,12 @@ class Lzw:
 
         return b''.join(compressed_data)
 
-    def decode(self, input_file_path):
+    def decode(self, data):
         compressed_data = []
-        with open(input_file_path, 'rb') as file:
-            while True:
-                encoded = file.read(2)
-                if len(encoded) != 2:
-                    break
-                value = struct.unpack('>H', encoded)
-                compressed_data.append(value[0])
+        for i in range(0, len(data), self.CHAR_EXTENSION_SIZE // 8):
+            encoded = data[i: i + self.CHAR_EXTENSION_SIZE // 8]
+            value = struct.unpack('>H', encoded)
+            compressed_data.append(value[0])
         alphabet = {i: i.to_bytes(1, 'big') for i in range(self.ALPHABET_SIZE)}
         extension_code = self.ALPHABET_SIZE
         extension = b''

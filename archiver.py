@@ -88,7 +88,7 @@ class Archiver:
             cursor += self.CHECKSUM_BLOCK
             data = archive[cursor: cursor + size]
             if checksum != hashlib.md5(data).digest():
-                print(f"\033[31m Ошибка контрольной суммы в {name}")
+                print(f"Ошибка контрольной суммы в {name}")
             with open(os.sep.join((path, name)), 'wb') as file:
                 file.write(data)
             cursor += size
