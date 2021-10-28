@@ -16,10 +16,14 @@ if __name__ == '__main__':
         input_paths, output_path = args.input_paths, args.output_path
         archiver = Archiver()
         lzw = Lzw()
-        compressed_data = lzw.encode(archiver.zip(input_paths))
+        archive, offsets = archiver.zip(input_paths)
+        compressed_data, statistics = lzw.encode(archive, offsets)
         output_file_path = os.sep.join((output_path, args.name + '.lzw'))
         with open(output_file_path, 'wb') as file:
             file.write(compressed_data)
+
+        for file in statistics:
+            print(f'{file}: {statistics[file]}')
 
     elif args.command == 'UNPACK':
         input_paths, output_path = args.input_paths, args.output_path

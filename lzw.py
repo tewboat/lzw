@@ -9,28 +9,38 @@ class Lzw:
     CHAR_EXTENSION_SIZE = 16
     MAX_ALPHABET_SIZE = 2 ** CHAR_EXTENSION_SIZE
 
-    def encode(self, data):
-
+    def encode(self, data, offsets):
         alphabet = {i.to_bytes(1, 'big'): i for i in range(self.ALPHABET_SIZE)}
 
+        statistics = {}
+        cur_stat = 0
+        prev_offset = 0
         compressed_data = []
         extension = b""
 
-        for char in data:
+        for i in range(len(data) + 1):
+            if i in offsets and offsets[i] != '':
+                statistics[offsets[i]] = cur_stat / (i - prev_offset)
+                prev_offset = i
+                cur_stat = 0
+            if i == len(data):
+                continue
+            char = data[i]
             byte = char.to_bytes(1, "big")
             temp = extension + byte
             if temp in alphabet:
                 extension = temp
             else:
                 compressed_data.append(struct.pack('>H', alphabet[extension]))
-                if len(alphabet) <= self.MAX_ALPHABET_SIZE:
+                cur_stat += 2
+                if len(alphabet) < self.MAX_ALPHABET_SIZE:
                     alphabet[temp] = len(alphabet)
                 extension = byte
 
         if extension in alphabet:
             compressed_data.append(struct.pack('>H', alphabet[extension]))
 
-        return b''.join(compressed_data)
+        return b''.join(compressed_data), statistics
 
     def decode(self, data):
         compressed_data = []
