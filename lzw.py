@@ -9,7 +9,7 @@ class Lzw:
     CHAR_EXTENSION_SIZE = 16
     MAX_ALPHABET_SIZE = 2 ** CHAR_EXTENSION_SIZE
 
-    def encode(self, data, offsets):
+    def encode(self, data, offsets=None):
         alphabet = {i.to_bytes(1, 'big'): i for i in range(self.ALPHABET_SIZE)}
 
         statistics = {}
@@ -19,7 +19,7 @@ class Lzw:
         extension = b""
 
         for i in range(len(data) + 1):
-            if i in offsets and offsets[i] != '':
+            if offsets and i in offsets and offsets[i] != '':
                 statistics[offsets[i]] = cur_stat / (i - prev_offset)
                 prev_offset = i
                 cur_stat = 0
