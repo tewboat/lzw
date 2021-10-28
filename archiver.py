@@ -24,6 +24,8 @@ class Archiver:
 
     def zip(self, paths):
         archive = []
+        offsets = {}
+        offset = 0
         for path in paths:
             if os.path.isdir(path):
                 local_root = path.split(os.sep)[-1]
@@ -34,16 +36,24 @@ class Archiver:
                     else:
                         folder_path = folder_name
                     folder_block = self.__get_folder_block(folder_path)
+                    offset += len(folder_block)
+                    offsets[offset] = ""
                     archive.append(folder_block)
                     for file in files:
+                        local_path = os.sep.join((folder_path, file))
                         file_block = self.__get_file_block__(os.sep.join((root, file)),
-                                                             os.sep.join((folder_path, file)))
+                                                             local_path)
                         archive.append(file_block)
+                        offset += len(file_block)
+                        offsets[offset] = local_path
+
             else:
                 file = path.split(os.sep)[-1]
                 file_block = self.__get_file_block__(path, file)
                 archive.append(file_block)
-        return b''.join(archive)
+                offset += len(file_block)
+                offsets[offset] = file
+        return b''.join(archive), offsets
 
     def __get_file_block__(self, absolute_path, local_path):
         block = b''
