@@ -15,11 +15,11 @@ class Archiver:
     """
     Format description:
     
-                Offset      Size
-    Name        0           128
-    Type        128         1       (0 for files, 1 for folders)
-    Size        129         4       (only for files)
-    Checksum    133         16      (only for files)
+                Size
+    Name        128
+    Type        1       (0 for files, 1 for folders)
+    Checksum    16      (only for files)
+    Size        4       (only for files)
     """
 
     def zip(self, paths):
@@ -61,11 +61,11 @@ class Archiver:
             data = file.read()
             block += self.__encode_name__(local_path)
             block += self.TYPE_FILE
+            hash = hashlib.md5(data).digest()
+            block += hash
             if len(data) > self.MAX_FILE_SIZE:
                 raise FileSizeException(f"File size is greater than {self.MAX_FILE_SIZE}")
             block += struct.pack('>I', len(data))
-            hash = hashlib.md5(data).digest()
-            block += hash
             block += data
         return block
 
@@ -91,11 +91,11 @@ class Archiver:
             if type == self.TYPE_FOLDER:
                 os.mkdir(os.sep.join((path, name)))
                 continue
+            checksum = archive[cursor: cursor + self.CHECKSUM_BLOCK]
+            cursor += self.CHECKSUM_BLOCK
             size = archive[cursor: cursor + self.SIZE_BLOCK]
             size = struct.unpack('>I', size)[0]
             cursor += self.SIZE_BLOCK
-            checksum = archive[cursor: cursor + self.CHECKSUM_BLOCK]
-            cursor += self.CHECKSUM_BLOCK
             data = archive[cursor: cursor + size]
             if checksum != hashlib.md5(data).digest():
                 print(f"Ошибка контрольной суммы в {name}")
