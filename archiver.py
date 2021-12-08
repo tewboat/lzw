@@ -1,12 +1,14 @@
 import os.path
 import struct
 import hashlib
+import exif
 
 
 class Archiver:
     NAME_BLOCK = 128
     TYPE_BLOCK = 1
     SIZE_BLOCK = 4
+    METADATA_SIZE_BLOCK = 2
     MAX_FILE_SIZE = 2 ** (SIZE_BLOCK * 8)
     TYPE_FOLDER = b'\01'
     TYPE_FILE = b'\00'
@@ -15,11 +17,14 @@ class Archiver:
     """
     Format description:
     
-                Size
-    Name        128
-    Type        1       (0 for files, 1 for folders)
-    Checksum    16      (only for files)
-    Size        4       (only for files)
+                    Size
+    Name            128
+    Type            1       (0 for files, 1 for folders)
+    Checksum        16      (only for files)
+    MetaDataSize    2       (only for files)
+    MetaData        ...     (only for files)
+    DataSize        4       (only for files)
+    Data            ...     (only for files)
     """
 
     def zip(self, paths):
@@ -59,12 +64,15 @@ class Archiver:
         block = b''
         with open(absolute_path, 'rb') as file:
             data = file.read()
+            if len(data) > self.MAX_FILE_SIZE:
+                raise FileSizeException(f"File size is greater than {self.MAX_FILE_SIZE}")
             block += self.__encode_name__(local_path)
             block += self.TYPE_FILE
             hash = hashlib.md5(data).digest()
             block += hash
-            if len(data) > self.MAX_FILE_SIZE:
-                raise FileSizeException(f"File size is greater than {self.MAX_FILE_SIZE}")
+            metadata = self.__get_metadata_block(file)
+            block += struct.pack('>H', len(metadata))
+            block += metadata
             block += struct.pack('>I', len(data))
             block += data
         return block
@@ -74,6 +82,28 @@ class Archiver:
         block += self.__encode_name__(path)
         block += self.TYPE_FOLDER
         return block
+
+    def __get_metadata_block(self, file):
+        block = []
+        file = exif.Image(file)
+        for tag in file.list_all():
+            value = file.get(tag)
+            if not value:
+                continue
+            if type(value) == tuple:
+                value = self.__encode_tuple__(value)
+            elif type(value) == str:
+                value = value.encode()
+            else:
+                value = str(int(value)).encode()
+            block.append(tag.encode() + b'=' + value)
+        return b'&'.join(block)
+
+    def __encode_tuple__(self, tuple):
+        encoded = []
+        for i in tuple:
+            encoded.append(str(i).encode())
+        return b'|'.join(encoded)
 
     def __encode_name__(self, name):
         encoded = name.encode()
@@ -93,14 +123,21 @@ class Archiver:
                 continue
             checksum = archive[cursor: cursor + self.CHECKSUM_BLOCK]
             cursor += self.CHECKSUM_BLOCK
+            metadata_size = archive[cursor: cursor + self.METADATA_SIZE_BLOCK]
+            metadata_size = struct.unpack('>H', metadata_size)[0]
+            cursor += self.METADATA_SIZE_BLOCK
+            metadata = archive[cursor: cursor + metadata_size]
+            metadata = self.__parse_metadata__(metadata)
+            cursor += metadata_size
             size = archive[cursor: cursor + self.SIZE_BLOCK]
             size = struct.unpack('>I', size)[0]
             cursor += self.SIZE_BLOCK
             data = archive[cursor: cursor + size]
             if checksum != hashlib.md5(data).digest():
                 print(f"Ошибка контрольной суммы в {name}")
-            with open(os.sep.join((path, name)), 'wb') as file:
+            with open(os.sep.join((path, name)), 'wb+') as file:
                 file.write(data)
+                self.__set_metadata__(file, metadata)
             cursor += size
 
     def __decode_name__(self, name: bytes):
@@ -108,6 +145,27 @@ class Archiver:
         while name[cursor] != 0:
             cursor += 1
         return name[0: cursor].decode()
+
+    def __set_metadata__(self, file, metadata):
+        file = exif.Image(file)
+        for tag in metadata:
+            file.set(tag, metadata[tag])
+
+    def __parse_metadata__(self, bytes: bytes):
+        if len(bytes) == 0:
+            return {}
+        metadata = {}
+        pairs = bytes.split(b'&')
+        for pair in pairs:
+            print(pair)
+            key, value = pair.split(b'=')
+            value = value.split(b'|')
+            if len(value) == 1:
+                value = value[0]
+            else:
+                value = tuple(value)
+            metadata[key] = value
+        return metadata
 
 
 class FileSizeException(Exception):
